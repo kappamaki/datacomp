@@ -130,10 +130,14 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
         print(CGRN + "Files match! 🙂" + CEND)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("fpath1", type=Path)
     parser.add_argument("fpath2", type=Path)
     parser.add_argument("index", nargs="+")
     args = parser.parse_args()
     compare_data(args.fpath1, args.fpath2, args.index)
+
+
+if __name__ == "__main__":
+    main()
