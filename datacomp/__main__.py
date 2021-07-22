@@ -87,8 +87,14 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
 
     if index_cols:
         print("Indexing dataframes ...")
-        df1 = df1.sort_values(index_cols).set_index(index_cols)
-        df2 = df2.sort_values(index_cols).set_index(index_cols)
+        for df, data_fpath in [(df1, data_fpath_1), (df2, data_fpath_2)]:
+            try:
+                df.sort_values(index_cols, inplace=True)
+                df.set_index(index_cols, inplace=True)
+            except KeyError:
+                err_msg = f"\n⚠️  ERROR: index columns ({', '.join(index_cols)}) not found in {data_fpath}"
+                print(err_msg)
+                sys.exit(1)
 
         print("Validating dataframe indices ...")
         l_dup_indices = df1.index.duplicated()
