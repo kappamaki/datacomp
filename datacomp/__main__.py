@@ -42,6 +42,17 @@ def series_to_str(series, **kwargs):
     return series.to_string(**kwargs)
 
 
+def dataframe_to_str(df, **kwargs):
+    if "max_rows" not in kwargs:
+        kwargs["max_rows"] = pd.get_option("display.max_rows")
+    if "min_rows" not in kwargs:
+        kwargs["min_rows"] = pd.get_option("display.min_rows")
+    if "max_colwidth" not in kwargs:
+        kwargs["max_colwidth"] = pd.get_option("display.max_colwidth")
+
+    return df.to_string(**kwargs)
+
+
 def header(msg):
     hbar = "=" * len(msg)
     return f"\n{hbar}\n{msg}\n{hbar}\n"
@@ -77,6 +88,35 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
 
         print(CRED + diff_msg + CEND)
 
+    print("Validating dataframe indices ...")
+    l_dup_indices = df1.index.duplicated()
+    r_dup_indices = df2.index.duplicated()
+    l_dup_index_count = l_dup_indices.sum()
+    r_dup_index_count = r_dup_indices.sum()
+
+    if l_dup_index_count or r_dup_index_count:
+        # Consider this an error because we are unable to determine if the data matches
+        data_matches = False
+        diff_msg = header(f"DATA CONTAINS DUPLICATE INDICES")
+
+        def dup_indices_msg(side, df, dup_indices, dup_index_count):
+            dup_index_df = pd.DataFrame(df.index[dup_indices].value_counts().rename("count"))
+            msg = f"{side} data contains {dup_index_count} rows with duplicate indices (dropping):\n"
+            msg += dataframe_to_str(dup_index_df)
+            msg += "\n"
+            return msg
+
+        if l_dup_index_count:
+            diff_msg += dup_indices_msg("left", df1, l_dup_indices, l_dup_index_count)
+            df1 = df1.loc[~l_dup_indices]
+        if l_dup_index_count and r_dup_index_count:
+            diff_msg += "\n"
+        if r_dup_index_count:
+            diff_msg += dup_indices_msg("right", df2, r_dup_indices, r_dup_index_count)
+            df2 = df2.loc[~r_dup_indices]
+
+        print(CRED + diff_msg + CEND)
+
     print("Comparing dataframe indices ...")
     if not df1.index.equals(df2.index):
         data_matches = False
@@ -94,13 +134,14 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
             diff_msg += f"right-only indices ({len(r_indices)}):\n{series_to_str(r_indices, index=None)}\n"
 
         common_ids = set(df1.index) & set(df2.index)
-        df1 = df1.loc[common_ids]
-        df2 = df2.loc[common_ids]
         diff_msg += header(f"COMPARING {len(common_ids)} ROWS WITH COMMON IDS")
         print(CRED + diff_msg + CEND)
 
         if not common_ids:
             sys.exit(1)
+
+        df1 = df1.loc[common_ids]
+        df2 = df2.loc[common_ids]
 
     common_cols = [col for col in df1 if col in set(df2.columns)]
     # quick check if dataframes match, otherwise show detailed differences
@@ -123,7 +164,7 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
                 diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
                 diff_msg += f"{mismatch_pct:.5f}% ({len(mismatch_df)}) of values differ\n"
                 diff_msg += "\nMismatched Values\n"
-                diff_msg += f"{mismatch_df.to_string(max_rows=10, max_colwidth=32)}\n"
+                diff_msg += f"{dataframe_to_str(mismatch_df)}\n"
                 print(CRED + diff_msg + CEND)
 
     if not data_matches:
