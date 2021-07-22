@@ -176,12 +176,25 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("fpath1", type=Path)
-    parser.add_argument("fpath2", type=Path)
-    parser.add_argument("index", nargs="*")
+    parser = argparse.ArgumentParser(description="compare two data files")
+    parser.add_argument(
+        "filepath_left",
+        type=Path,
+        help="path to data file",
+    )
+    parser.add_argument(
+        "filepath_right",
+        type=Path,
+        help="path to data file",
+    )
+    parser.add_argument(
+        "index",
+        nargs="*",
+        help="one or more columns to use as an index for the data "
+             "(optional: row number will be used if no arguments given)"
+    )
     args = parser.parse_args()
-    compare_data(args.fpath1, args.fpath2, args.index)
+    compare_data(args.filepath_left, args.filepath_right, args.index)
 
 
 if __name__ == "__main__":
