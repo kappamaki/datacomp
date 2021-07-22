@@ -65,9 +65,6 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
     df1 = load_file(data_fpath_1)
     print(f"Loading {data_fpath_2} ...")
     df2 = load_file(data_fpath_2)
-    print("Indexing dataframes ...")
-    df1 = df1.sort_values(index_cols).set_index(index_cols)
-    df2 = df2.sort_values(index_cols).set_index(index_cols)
 
     if set(df1.columns) != set(df2.columns):
         data_matches = False
@@ -88,34 +85,39 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
 
         print(CRED + diff_msg + CEND)
 
-    print("Validating dataframe indices ...")
-    l_dup_indices = df1.index.duplicated()
-    r_dup_indices = df2.index.duplicated()
-    l_dup_index_count = l_dup_indices.sum()
-    r_dup_index_count = r_dup_indices.sum()
+    if index_cols:
+        print("Indexing dataframes ...")
+        df1 = df1.sort_values(index_cols).set_index(index_cols)
+        df2 = df2.sort_values(index_cols).set_index(index_cols)
 
-    if l_dup_index_count or r_dup_index_count:
-        # Consider this an error because we are unable to determine if the data matches
-        data_matches = False
-        diff_msg = header(f"DATA CONTAINS DUPLICATE INDICES")
+        print("Validating dataframe indices ...")
+        l_dup_indices = df1.index.duplicated()
+        r_dup_indices = df2.index.duplicated()
+        l_dup_index_count = l_dup_indices.sum()
+        r_dup_index_count = r_dup_indices.sum()
 
-        def dup_indices_msg(side, df, dup_indices, dup_index_count):
-            dup_index_df = pd.DataFrame(df.index[dup_indices].value_counts().rename("count"))
-            msg = f"{side} data contains {dup_index_count} rows with duplicate indices (dropping):\n"
-            msg += dataframe_to_str(dup_index_df)
-            msg += "\n"
-            return msg
+        if l_dup_index_count or r_dup_index_count:
+            # Consider this an error because we are unable to determine if the data matches
+            data_matches = False
+            diff_msg = header(f"DATA CONTAINS DUPLICATE INDICES")
 
-        if l_dup_index_count:
-            diff_msg += dup_indices_msg("left", df1, l_dup_indices, l_dup_index_count)
-            df1 = df1.loc[~l_dup_indices]
-        if l_dup_index_count and r_dup_index_count:
-            diff_msg += "\n"
-        if r_dup_index_count:
-            diff_msg += dup_indices_msg("right", df2, r_dup_indices, r_dup_index_count)
-            df2 = df2.loc[~r_dup_indices]
+            def dup_indices_msg(side, df, dup_indices, dup_index_count):
+                dup_index_df = pd.DataFrame(df.index[dup_indices].value_counts().rename("count"))
+                msg = f"{side} data contains {dup_index_count} rows with duplicate indices (dropping):\n"
+                msg += dataframe_to_str(dup_index_df)
+                msg += "\n"
+                return msg
 
-        print(CRED + diff_msg + CEND)
+            if l_dup_index_count:
+                diff_msg += dup_indices_msg("left", df1, l_dup_indices, l_dup_index_count)
+                df1 = df1.loc[~l_dup_indices]
+            if l_dup_index_count and r_dup_index_count:
+                diff_msg += "\n"
+            if r_dup_index_count:
+                diff_msg += dup_indices_msg("right", df2, r_dup_indices, r_dup_index_count)
+                df2 = df2.loc[~r_dup_indices]
+
+            print(CRED + diff_msg + CEND)
 
     print("Comparing dataframe indices ...")
     if not df1.index.equals(df2.index):
@@ -177,7 +179,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("fpath1", type=Path)
     parser.add_argument("fpath2", type=Path)
-    parser.add_argument("index", nargs="+")
+    parser.add_argument("index", nargs="*")
     args = parser.parse_args()
     compare_data(args.fpath1, args.fpath2, args.index)
 
