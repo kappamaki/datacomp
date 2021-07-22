@@ -87,11 +87,11 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
         r_indices = pd.Series(sorted(set(df2.index) - set(df1.index)), dtype=df2.index.dtype)
 
         if not l_indices.empty:
-            diff_msg += f"left-only indices:\n{series_to_str(l_indices, index=None)}\n"
+            diff_msg += f"left-only indices ({len(l_indices)}):\n{series_to_str(l_indices, index=None)}\n"
         if not l_indices.empty and not r_indices.empty:
             diff_msg += "\n"
         if not r_indices.empty:
-            diff_msg += f"right-only indices:\n{series_to_str(r_indices, index=None)}\n"
+            diff_msg += f"right-only indices ({len(r_indices)}):\n{series_to_str(r_indices, index=None)}\n"
 
         common_ids = set(df1.index) & set(df2.index)
         df1 = df1.loc[common_ids]
@@ -102,7 +102,7 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
         if not common_ids:
             sys.exit(1)
 
-    common_cols = list(set(df1.columns) & set(df2.columns))
+    common_cols = [col for col in df1 if col in set(df2.columns)]
     # quick check if dataframes match, otherwise show detailed differences
     print("Comparing data ...")
     if not df1[common_cols].equals(df2[common_cols]):
@@ -121,7 +121,7 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
                 mismatch_pct = len(mismatch_idx) / len(df1) * 100
 
                 diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
-                diff_msg += f"{mismatch_pct:.5f}% of values differ\n"
+                diff_msg += f"{mismatch_pct:.5f}% ({len(mismatch_df)}) of values differ\n"
                 diff_msg += "\nMismatched Values\n"
                 diff_msg += f"{mismatch_df.to_string(max_rows=10, max_colwidth=32)}\n"
                 print(CRED + diff_msg + CEND)
