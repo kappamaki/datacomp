@@ -112,10 +112,7 @@ def print_result(result: CompareResult):
                 f"left-only indices ({len(result.left_only_indexes)}):\n"
                 f"{series_to_str(result.left_only_indexes, index=None)}\n"
             )
-        if (
-            not result.left_only_indexes.empty
-            and result.right_only_indexes.empty
-        ):
+        if not result.left_only_indexes.empty and not result.right_only_indexes.empty:
             diff_msg += "\n"
         if not result.right_only_indexes.empty:
             diff_msg += (
