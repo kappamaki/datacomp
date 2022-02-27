@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from datacomp.compare import CompareResult, compare_data
+
 
 CRED = "\033[91m"
 CGRN = "\033[92m"
@@ -58,124 +60,86 @@ def header(msg):
     return f"\n{hbar}\n{msg}\n{hbar}\n"
 
 
-def compare_data(data_fpath_1, data_fpath_2, index_cols):
-    data_matches = True
-
-    print(f"Loading {data_fpath_1} ...")
-    df1 = load_file(data_fpath_1)
-    print(f"Loading {data_fpath_2} ...")
-    df2 = load_file(data_fpath_2)
-
-    if set(df1.columns) != set(df2.columns):
-        data_matches = False
+def print_result(result: CompareResult):
+    if result.left_only_columns or result.right_only_columns:
         diff_msg = header("COLUMNS DO NOT MATCH")
-        l_cols = pd.Series(sorted(set(df1.columns) - set(df2.columns)), dtype=str)
-        r_cols = pd.Series(sorted(set(df2.columns) - set(df1.columns)), dtype=str)
-
-        if not l_cols.empty:
+        if result.left_only_columns:
             diff_msg += "left-only columns:\n"
-            for col in l_cols:
+            for col in result.left_only_columns:
                 diff_msg += f" {col}\n"
-        if not l_cols.empty and not r_cols.empty:
+        if result.left_only_columns and result.right_only_columns:
             diff_msg += "\n"
-        if not r_cols.empty:
+        if result.right_only_columns:
             diff_msg += "right-only columns:\n"
-            for col in r_cols:
+            for col in result.right_only_columns:
                 diff_msg += f" {col}\n"
 
         print(CRED + diff_msg + CEND)
 
-    if index_cols:
-        print("Indexing dataframes ...")
-        for df, data_fpath in [(df1, data_fpath_1), (df2, data_fpath_2)]:
-            try:
-                df.sort_values(index_cols, inplace=True)
-                df.set_index(index_cols, inplace=True)
-            except KeyError:
-                err_msg = f"\n⚠️  ERROR: index columns ({', '.join(index_cols)}) not found in {data_fpath}"
-                print(err_msg)
-                sys.exit(1)
+        if result.left_index_duplicates is not None or result.right_index_duplicates is not None:
+            diff_msg = header("DATA CONTAINS DUPLICATE INDICES")
 
-        print("Validating dataframe indices ...")
-        l_dup_indices = df1.index.duplicated()
-        r_dup_indices = df2.index.duplicated()
-        l_dup_index_count = l_dup_indices.sum()
-        r_dup_index_count = r_dup_indices.sum()
-
-        if l_dup_index_count or r_dup_index_count:
-            # Consider this an error because we are unable to determine if the data matches
-            data_matches = False
-            diff_msg = header(f"DATA CONTAINS DUPLICATE INDICES")
-
-            def dup_indices_msg(side, df, dup_indices, dup_index_count):
-                dup_index_df = pd.DataFrame(df.index[dup_indices].value_counts().rename("count"))
-                msg = f"{side} data contains {dup_index_count} rows with duplicate indices (dropping):\n"
-                msg += dataframe_to_str(dup_index_df)
+            def dup_indices_msg(side, dup_index_data):
+                dup_index_count = len(dup_index_data)
+                msg = (
+                    f"{side} data contains {dup_index_count} rows with duplicate indices "
+                    "(dropped):\n"
+                )
+                msg += dataframe_to_str(dup_index_data)
                 msg += "\n"
                 return msg
 
-            if l_dup_index_count:
-                diff_msg += dup_indices_msg("left", df1, l_dup_indices, l_dup_index_count)
-                df1 = df1.loc[~l_dup_indices]
-            if l_dup_index_count and r_dup_index_count:
+            if result.left_index_duplicates is not None:
+                diff_msg += dup_indices_msg("left", result.left_index_duplicates)
+            if (
+                result.left_index_duplicates is not None
+                and result.right_index_duplicates is not None
+            ):
                 diff_msg += "\n"
-            if r_dup_index_count:
-                diff_msg += dup_indices_msg("right", df2, r_dup_indices, r_dup_index_count)
-                df2 = df2.loc[~r_dup_indices]
+            if result.right_index_duplicates is not None:
+                diff_msg += dup_indices_msg("right", result.right_index_duplicates)
 
             print(CRED + diff_msg + CEND)
 
-    print("Comparing dataframe indices ...")
-    if not df1.index.equals(df2.index):
-        data_matches = False
+    if not result.index_match:
         diff_msg = header("INDICES DO NOT MATCH")
-        diff_msg += f"left index count: {len(df1)}\n"
-        diff_msg += f"right index count: {len(df2)}\n\n"
-        l_indices = pd.Series(sorted(set(df1.index) - set(df2.index)), dtype=df1.index.dtype)
-        r_indices = pd.Series(sorted(set(df2.index) - set(df1.index)), dtype=df2.index.dtype)
+        diff_msg += f"left index count: {result.left_index_count}\n"
+        diff_msg += f"right index count: {result.right_index_count}\n\n"
 
-        if not l_indices.empty:
-            diff_msg += f"left-only indices ({len(l_indices)}):\n{series_to_str(l_indices, index=None)}\n"
-        if not l_indices.empty and not r_indices.empty:
+        if result.left_only_indexes is not None:
+            diff_msg += (
+                f"left-only indices ({len(result.left_only_indexes)}):\n"
+                f"{series_to_str(result.left_only_indexes, index=None)}\n"
+            )
+        if (
+            result.left_only_indexes is not None
+            and result.right_only_indexes is not None
+        ):
             diff_msg += "\n"
-        if not r_indices.empty:
-            diff_msg += f"right-only indices ({len(r_indices)}):\n{series_to_str(r_indices, index=None)}\n"
+        if result.right_only_indexes is not None:
+            diff_msg += (
+                f"right-only indices ({len(result.right_only_indexes)}):\n"
+                f"{series_to_str(result.right_only_indexes, index=None)}\n"
+            )
 
-        common_ids = set(df1.index) & set(df2.index)
-        diff_msg += header(f"COMPARING {len(common_ids)} ROWS WITH COMMON IDS")
+        diff_msg += header(f"COMPARING {result.common_index_count} ROWS WITH COMMON IDS")
         print(CRED + diff_msg + CEND)
 
-        if not common_ids:
-            sys.exit(1)
-
-        df1 = df1.loc[common_ids]
-        df2 = df2.loc[common_ids]
-
-    common_cols = [col for col in df1 if col in set(df2.columns)]
-    # quick check if dataframes match, otherwise show detailed differences
-    print("Comparing data ...")
-    if not df1[common_cols].equals(df2[common_cols]):
+    if not result.data_match:
         diff_msg = header("DATA DOES NOT MATCH")
         print(CRED + diff_msg + CEND)
 
-        for idx, col in enumerate(common_cols):
-            print(f"Comparing column ({idx + 1}/{len(common_cols)}): {col} ...")
-            if not df1[col].equals(df2[col]):
-                data_matches = False
+        for col, col_result in result.column_results.items():
+            diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
+            diff_msg += (
+                f"{col_result.mismatch_percent:.5f}% "
+                f"({col_result.mismatch_number}) of values differ\n"
+            )
+            diff_msg += "\nMismatched Values\n"
+            diff_msg += f"{dataframe_to_str(col_result.mismatch_data)}\n"
+            print(CRED + diff_msg + CEND)
 
-                mismatch_idx = series_nonequal_index(df1[col], df2[col])
-                mismatch_df = df1.loc[mismatch_idx, [col]].join(
-                    df2.loc[mismatch_idx, [col]], lsuffix="_LEFT", rsuffix="_RIGHT"
-                )
-                mismatch_pct = len(mismatch_idx) / len(df1) * 100
-
-                diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
-                diff_msg += f"{mismatch_pct:.5f}% ({len(mismatch_df)}) of values differ\n"
-                diff_msg += "\nMismatched Values\n"
-                diff_msg += f"{dataframe_to_str(mismatch_df)}\n"
-                print(CRED + diff_msg + CEND)
-
-    if not data_matches:
+    if not result.match:
         sys.exit(1)
     else:
         print(CGRN + "Files match! 🙂" + CEND)
@@ -200,7 +164,8 @@ def main():
              "(optional: row number will be used if no arguments given)"
     )
     args = parser.parse_args()
-    compare_data(args.filepath_left, args.filepath_right, args.index)
+    result = compare_data(args.filepath_left, args.filepath_right, args.index)
+    print_result(result)
 
 
 if __name__ == "__main__":

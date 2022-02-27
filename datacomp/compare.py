@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -16,9 +17,10 @@ class ColumnResult:
 
 @dataclass
 class CompareResult:
+    match: bool = True
     data_match: bool = True
-    left_only_columns: List[str] = []
-    right_only_columns: List[str] = []
+    left_only_columns: Optional[List[str]] = None
+    right_only_columns: Optional[List[str]] = None
     index_match: bool = True
     left_index_duplicates: Optional[pd.DataFrame] = None
     right_index_duplicates: Optional[pd.DataFrame] = None
@@ -27,10 +29,13 @@ class CompareResult:
     right_index_count: int = 0
     left_only_indexes: Optional[pd.Series] = None
     right_only_indexes: Optional[pd.Series] = None
-    column_results: Dict[str, ColumnResult] = {}
+    column_results: Optional[Dict[str, ColumnResult]] = None
+
+    def __post_init__(self):
+        self.column_results = {}
 
 
-def series_nonequal_index(ser1, ser2):
+def series_nonequal_index(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
     ser1_null = ser1.isnull()
     ser2_null = ser2.isnull()
     # Get index where series values are null in one series but the other
@@ -43,7 +48,7 @@ def series_nonequal_index(ser1, ser2):
     return nonequal_null_idx + nonequal_notnull_idx
 
 
-def load_file(fpath):
+def load_file(fpath: Path) -> pd.DataFrame:
     if fpath.suffix == ".parquet":
         return pd.read_parquet(fpath)
     if fpath.suffix == ".csv":
@@ -52,7 +57,7 @@ def load_file(fpath):
     raise RuntimeError(f"Unsupported file type {fpath.suffix} for {fpath}")
 
 
-def compare_data(data_fpath_1, data_fpath_2, index_cols):
+def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) -> CompareResult:
     result = CompareResult()
 
     print(f"Loading {data_fpath_1} ...")
@@ -61,7 +66,7 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
     df2 = load_file(data_fpath_2)
 
     if set(df1.columns) != set(df2.columns):
-        result.data_match = False
+        result.match = False
         result.left_only_columns = sorted(set(df1.columns) - set(df2.columns))
         result.right_only_columns = sorted(set(df2.columns) - set(df1.columns))
 
@@ -83,12 +88,12 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
         r_dup_indices = df2.index.duplicated()
         if l_dup_indices.any():
             # Consider this an error because we are unable to determine if the data matches
-            result.data_match = False
+            result.match = False
             result.left_index_duplicates = pd.DataFrame(
                 df.index[l_dup_indices].value_counts().rename("count")
             )
         if r_dup_indices.any():
-            result.data_match = False
+            result.match = False
             result.right_index_duplicates = pd.DataFrame(
                 df.index[r_dup_indices].value_counts().rename("count")
             )
@@ -97,7 +102,7 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
     result.left_index_count = len(df1)
     result.right_index_count = len(df2)
     if not df1.index.equals(df2.index):
-        result.data_match = False
+        result.match = False
         result.index_match = False
 
         result.left_only_indexes = pd.Series(
@@ -122,6 +127,7 @@ def compare_data(data_fpath_1, data_fpath_2, index_cols):
     # quick check if dataframes match, otherwise show detailed differences
     print("Comparing data ...")
     if not df1[common_cols].equals(df2[common_cols]):
+        result.match = False
         result.data_match = False
 
         for idx, col in enumerate(common_cols):
