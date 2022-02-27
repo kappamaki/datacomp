@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -10,6 +10,8 @@ import pandas as pd
 @dataclass
 class ColumnResult:
     dtype_match: bool = True
+    left_dtype: Any = None
+    right_dtype: Any = None
     mismatch_percent: Optional[float] = None
     mismatch_number: Optional[int] = None
     mismatch_data: Optional[pd.DataFrame] = None
@@ -144,6 +146,8 @@ def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) 
 
                 result.column_results[col] = ColumnResult(
                     dtype_match=(df1[col].dtype == df2[col].dtype),
+                    left_dtype=df1[col].dtype,
+                    right_dtype=df2[col].dtype,
                     mismatch_percent=mismatch_pct,
                     mismatch_number=len(mismatch_idx),
                     mismatch_data=mismatch_df,

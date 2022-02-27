@@ -130,14 +130,21 @@ def print_result(result: CompareResult):
         print(CRED + diff_msg + CEND)
 
         for col, col_result in result.column_results.items():
-            diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
-            diff_msg += (
-                f"{col_result.mismatch_percent:.5f}% "
-                f"({col_result.mismatch_number}) of values differ\n"
-            )
-            diff_msg += "\nMismatched Values\n"
-            diff_msg += f"{dataframe_to_str(col_result.mismatch_data)}\n"
-            print(CRED + diff_msg + CEND)
+            if not col_result.dtype_match:
+                diff_msg = header(f'COLUMN "{col}" DATA TYPES DO NOT MATCH')
+                diff_msg += f"left data type: {col_result.left_dtype}\n"
+                diff_msg += f"right data type: {col_result.right_dtype}\n"
+                print(CRED + diff_msg + CEND)
+
+            if col_result.mismatch_number:
+                diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
+                diff_msg += (
+                    f"{col_result.mismatch_percent:.5f}% "
+                    f"({col_result.mismatch_number}) of values differ\n"
+                )
+                diff_msg += "\nMismatched Values\n"
+                diff_msg += f"{dataframe_to_str(col_result.mismatch_data)}\n"
+                print(CRED + diff_msg + CEND)
 
     if not result.match:
         sys.exit(1)
