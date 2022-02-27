@@ -81,9 +81,10 @@ def print_result(result: CompareResult):
 
         def dup_indices_msg(side, dup_index_data):
             dup_index_count = len(dup_index_data)
+            msg_index_word = "index" if dup_index_count > 0 else "indices"
             msg = (
-                f"{side} data contains {dup_index_count} duplicated indices "
-                "(dropped):\n"
+                f"{side} data contains {dup_index_count} duplicated {msg_index_word}\n"
+                "(dropped duplicate rows):\n"
             )
             msg += dataframe_to_str(dup_index_data)
             msg += "\n"
@@ -125,26 +126,22 @@ def print_result(result: CompareResult):
         diff_msg += header(f"COMPARING {result.common_index_count} ROWS WITH COMMON IDS")
         print(CRED + diff_msg + CEND)
 
-    if not result.data_match:
-        diff_msg = header("DATA DOES NOT MATCH")
-        print(CRED + diff_msg + CEND)
+    for col, col_result in result.column_results.items():
+        if not col_result.dtype_match:
+            diff_msg = header(f'COLUMN "{col}" DATA TYPES DO NOT MATCH')
+            diff_msg += f"left data type: {col_result.left_dtype}\n"
+            diff_msg += f"right data type: {col_result.right_dtype}\n"
+            print(CRED + diff_msg + CEND)
 
-        for col, col_result in result.column_results.items():
-            if not col_result.dtype_match:
-                diff_msg = header(f'COLUMN "{col}" DATA TYPES DO NOT MATCH')
-                diff_msg += f"left data type: {col_result.left_dtype}\n"
-                diff_msg += f"right data type: {col_result.right_dtype}\n"
-                print(CRED + diff_msg + CEND)
-
-            if col_result.mismatch_number:
-                diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
-                diff_msg += (
-                    f"{col_result.mismatch_percent:.5f}% "
-                    f"({col_result.mismatch_number}) of values differ\n"
-                )
-                diff_msg += "\nMismatched Values\n"
-                diff_msg += f"{dataframe_to_str(col_result.mismatch_data)}\n"
-                print(CRED + diff_msg + CEND)
+        if col_result.mismatch_number:
+            diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
+            diff_msg += (
+                f"{col_result.mismatch_percent:.5f}% "
+                f"({col_result.mismatch_number}) of values differ\n"
+            )
+            diff_msg += "\nMismatched Values\n"
+            diff_msg += f"{dataframe_to_str(col_result.mismatch_data)}\n"
+            print(CRED + diff_msg + CEND)
 
     if not result.match:
         sys.exit(1)

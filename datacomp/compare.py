@@ -94,13 +94,13 @@ def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) 
             # Consider this an error because we are unable to determine if the data matches
             result.match = False
             result.left_index_duplicates = pd.DataFrame(
-                df.index[l_dup_indices].value_counts().rename("count")
+                df1.index[l_dup_indices].value_counts().rename("count")
             )
             df1 = df1[~df1.index.duplicated(keep="first")]
         if r_dup_indices.any():
             result.match = False
             result.right_index_duplicates = pd.DataFrame(
-                df.index[r_dup_indices].value_counts().rename("count")
+                df2.index[r_dup_indices].value_counts().rename("count")
             )
             df2 = df2[~df2.index.duplicated(keep="first")]
 
