@@ -106,17 +106,17 @@ def print_result(result: CompareResult):
         diff_msg += f"left index count: {result.left_index_count}\n"
         diff_msg += f"right index count: {result.right_index_count}\n\n"
 
-        if result.left_only_indexes is not None:
+        if not result.left_only_indexes.empty:
             diff_msg += (
                 f"left-only indices ({len(result.left_only_indexes)}):\n"
                 f"{series_to_str(result.left_only_indexes, index=None)}\n"
             )
         if (
-            result.left_only_indexes is not None
-            and result.right_only_indexes is not None
+            not result.left_only_indexes.empty
+            and result.right_only_indexes.empty
         ):
             diff_msg += "\n"
-        if result.right_only_indexes is not None:
+        if not result.right_only_indexes.empty:
             diff_msg += (
                 f"right-only indices ({len(result.right_only_indexes)}):\n"
                 f"{series_to_str(result.right_only_indexes, index=None)}\n"

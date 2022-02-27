@@ -35,6 +35,8 @@ class CompareResult:
 
     def __post_init__(self):
         self.column_results = {}
+        self.left_only_indexes = pd.Series([], dtype=str)
+        self.right_only_indexes = pd.Series([], dtype=str)
 
 
 def series_nonequal_index(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
@@ -43,7 +45,7 @@ def series_nonequal_index(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
     # Get index where series values are null in one series but the other
     nonequal_null_idx = list(set(ser1[ser1_null].index) ^ set(ser2[ser2_null].index))
     # Get index where series non-null values are nonequal
-    notnull_idx = set(ser1[~ser1_null].index) & set(ser2[~ser2_null].index)
+    notnull_idx = list(set(ser1[~ser1_null].index) & set(ser2[~ser2_null].index))
     nonequal_notnull_idx = ser1.loc[notnull_idx] != ser2.loc[notnull_idx]
     nonequal_notnull_idx = ser1.loc[notnull_idx][nonequal_notnull_idx].index.tolist()
     # Combine null/non-null indexes
@@ -116,7 +118,7 @@ def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) 
             sorted(set(df2.index) - set(df1.index)), dtype=df2.index.dtype
         )
 
-        common_ids = set(df1.index) & set(df2.index)
+        common_ids = list(set(df1.index) & set(df2.index))
         result.common_index_count = len(common_ids)
 
         if not common_ids:
