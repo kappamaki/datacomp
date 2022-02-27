@@ -105,7 +105,8 @@ def print_result(result: CompareResult):
     if not result.index_match:
         diff_msg = header("INDICES DO NOT MATCH")
         diff_msg += f"left index count: {result.left_index_count}\n"
-        diff_msg += f"right index count: {result.right_index_count}\n\n"
+        diff_msg += f"right index count: {result.right_index_count}\n"
+        diff_msg += f"commmon index count: {result.common_index_count}\n\n"
 
         if not result.left_only_indexes.empty:
             diff_msg += (
@@ -120,7 +121,6 @@ def print_result(result: CompareResult):
                 f"{series_to_str(result.right_only_indexes, index=None)}\n"
             )
 
-        diff_msg += header(f"COMPARING {result.common_index_count} ROWS WITH COMMON IDS")
         print(CRED + diff_msg + CEND)
 
     for col, col_result in result.column_results.items():
