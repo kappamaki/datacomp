@@ -76,30 +76,30 @@ def print_result(result: CompareResult):
 
         print(CRED + diff_msg + CEND)
 
-        if result.left_index_duplicates is not None or result.right_index_duplicates is not None:
-            diff_msg = header("DATA CONTAINS DUPLICATE INDICES")
+    if result.left_index_duplicates is not None or result.right_index_duplicates is not None:
+        diff_msg = header("DATA CONTAINS DUPLICATE INDICES")
 
-            def dup_indices_msg(side, dup_index_data):
-                dup_index_count = len(dup_index_data)
-                msg = (
-                    f"{side} data contains {dup_index_count} rows with duplicate indices "
-                    "(dropped):\n"
-                )
-                msg += dataframe_to_str(dup_index_data)
-                msg += "\n"
-                return msg
+        def dup_indices_msg(side, dup_index_data):
+            dup_index_count = len(dup_index_data)
+            msg = (
+                f"{side} data contains {dup_index_count} duplicated indices "
+                "(dropped):\n"
+            )
+            msg += dataframe_to_str(dup_index_data)
+            msg += "\n"
+            return msg
 
-            if result.left_index_duplicates is not None:
-                diff_msg += dup_indices_msg("left", result.left_index_duplicates)
-            if (
-                result.left_index_duplicates is not None
-                and result.right_index_duplicates is not None
-            ):
-                diff_msg += "\n"
-            if result.right_index_duplicates is not None:
-                diff_msg += dup_indices_msg("right", result.right_index_duplicates)
+        if result.left_index_duplicates is not None:
+            diff_msg += dup_indices_msg("left", result.left_index_duplicates)
+        if (
+            result.left_index_duplicates is not None
+            and result.right_index_duplicates is not None
+        ):
+            diff_msg += "\n"
+        if result.right_index_duplicates is not None:
+            diff_msg += dup_indices_msg("right", result.right_index_duplicates)
 
-            print(CRED + diff_msg + CEND)
+        print(CRED + diff_msg + CEND)
 
     if not result.index_match:
         diff_msg = header("INDICES DO NOT MATCH")
