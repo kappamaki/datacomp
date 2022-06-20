@@ -6,7 +6,7 @@ setup(
     version="0.3.0",
     description="CLI for comparing tabular data files",
     author="kappamaki",
-    install_requires=["pandas"],
+    install_requires=["pandas", "pyarrow"],
     python_requires=">=3.6",
     packages=["datacomp"],
     entry_points = {"console_scripts": ["datacomp=datacomp.__main__:main"]},
