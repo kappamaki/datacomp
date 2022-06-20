@@ -48,11 +48,14 @@ def series_nonequal_index(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
     # Get index where series non-null values are nonequal
     notnull_idx = list(set(ser1[~ser1_null].index) & set(ser2[~ser2_null].index))
 
-    # Use this function instead of != operator on ser1/ser2
-    # (handle series of numpy arrays)
-    v_array_equal = np.vectorize(np.array_equal)
-    nonequal_notnull_idx = ~v_array_equal(ser1.loc[notnull_idx], ser2.loc[notnull_idx])
-    nonequal_notnull_idx = ser1.loc[notnull_idx][nonequal_notnull_idx].index.tolist()
+    if notnull_idx:
+        # Use this function instead of != operator on ser1/ser2
+        # (handle series of numpy arrays)
+        v_array_equal = np.vectorize(np.array_equal)
+        nonequal_notnull_idx = ~v_array_equal(ser1.loc[notnull_idx], ser2.loc[notnull_idx])
+        nonequal_notnull_idx = ser1.loc[notnull_idx][nonequal_notnull_idx].index.tolist()
+    else:
+        nonequal_notnull_idx = []
 
     # Combine null/non-null indexes
     return nonequal_null_idx + nonequal_notnull_idx
