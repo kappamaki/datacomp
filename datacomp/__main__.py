@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 
 from datacomp.compare import CompareResult, compare_data
 
@@ -131,11 +132,60 @@ def print_result(result: CompareResult):
             print(CRED + diff_msg + CEND)
 
         if col_result.mismatch_number:
+            # Number formatting used for aligned numbers
+            num_format = ".5g"
+
             diff_msg = header(f'COLUMN "{col}" VALUES DO NOT MATCH')
             diff_msg += (
-                f"{col_result.mismatch_percent:.5f}% "
+                f"{col_result.mismatch_percent:{num_format}}% "
                 f"({col_result.mismatch_number}) of values differ\n"
             )
+
+            if col_result.diff_min is not None:
+                diff_msg += "\n"
+                max_chars = max(
+                    len(f"{num:{num_format}}") for num in [
+                        col_result.diff_min,
+                        col_result.diff_max,
+                        col_result.diff_mean,
+                        col_result.diff_std,
+                    ]
+                )
+                num_format_align_diff = f">{max_chars}{num_format}"
+                max_chars = max(
+                    len(f"{num:{num_format}}") for num in [
+                        col_result.ratio_min_nonzero,
+                        col_result.ratio_max_nonzero,
+                        col_result.ratio_mean,
+                        col_result.ratio_std,
+                    ]
+                )
+                num_format_align_ratio = f">{max_chars}{num_format}"
+
+                diff_msg += f"diff min:  {col_result.diff_min:{num_format_align_diff}}    "
+                diff_msg += f"ratio min:  {col_result.ratio_min:{num_format_align_ratio}}"
+                if col_result.ratio_min == 0:
+                    diff_msg += f" (non-zero: {col_result.ratio_min_nonzero:{num_format}})"
+                diff_msg += "\n"
+
+                diff_msg += f"diff max:  {col_result.diff_max:{num_format_align_diff}}    "
+                diff_msg += f"ratio max:  {col_result.ratio_max:{num_format_align_ratio}}"
+                if np.isinf(col_result.ratio_max):
+                    diff_msg += f" (non-zero: {col_result.ratio_max_nonzero:{num_format}})"
+                diff_msg += "\n"
+
+                diff_msg += f"diff mean: {col_result.diff_mean:{num_format_align_diff}}    "
+                diff_msg += f"ratio mean: {col_result.ratio_mean:{num_format_align_ratio}}"
+                if col_result.ratio_inf_count > 0:
+                    diff_msg += f' (exluding {col_result.ratio_inf_count} "inf" values)'
+                diff_msg += "\n"
+
+                diff_msg += f"diff std:  {col_result.diff_std:{num_format_align_diff}}    "
+                diff_msg += f"ratio std:  {col_result.ratio_std:{num_format_align_ratio}}"
+                if col_result.ratio_inf_count > 0:
+                    diff_msg += f' (exluding {col_result.ratio_inf_count} "inf" values)'
+                diff_msg += "\n"
+
             diff_msg += "\nMismatched Values\n"
             diff_msg += f"{dataframe_to_str(col_result.mismatch_data)}\n"
             print(CRED + diff_msg + CEND)
