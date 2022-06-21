@@ -16,6 +16,17 @@ class ColumnResult:
     mismatch_percent: Optional[float] = None
     mismatch_number: Optional[int] = None
     mismatch_data: Optional[pd.DataFrame] = None
+    diff_min: Optional[float] = None
+    diff_max: Optional[float] = None
+    diff_mean: Optional[float] = None
+    diff_std: Optional[float] = None
+    ratio_min: Optional[float] = None
+    ratio_max: Optional[float] = None
+    ratio_mean: Optional[float] = None
+    ratio_std: Optional[float] = None
+    ratio_min_nonzero: Optional[float] = None
+    ratio_max_nonzero: Optional[float] = None
+    ratio_inf_count: Optional[int] = None
 
 
 @dataclass
@@ -163,5 +174,30 @@ def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) 
                     mismatch_number=len(mismatch_idx),
                     mismatch_data=mismatch_df,
                 )
+
+                if (
+                    pd.api.types.is_numeric_dtype(df1[col].dtype)
+                    and pd.api.types.is_numeric_dtype(df2[col].dtype)
+                ):
+                    abs_diff = (df1[col] - df2[col]).abs()
+                    result.column_results[col].diff_min = abs_diff.min()
+                    result.column_results[col].diff_max = abs_diff.max()
+                    result.column_results[col].diff_mean = abs_diff.mean()
+                    result.column_results[col].diff_std = abs_diff.std()
+
+                    # Ratio for all values (inlcuding zeros; min/max may be 0/inf)
+                    ratio = (df1[col] / df2[col])
+                    result.column_results[col].ratio_min = ratio.min()
+                    result.column_results[col].ratio_max = ratio.max()
+                    idx_inf = np.isinf(ratio)
+                    result.column_results[col].ratio_mean = ratio[~idx_inf].mean()
+                    result.column_results[col].ratio_std = ratio[~idx_inf].std()
+                    result.column_results[col].ratio_inf_count = idx_inf.sum()
+
+                    # Get ratio for non-zero values only
+                    idx_gt_zero = (df1[col] != 0) & (df2[col] != 0)
+                    ratio = (df1[col][idx_gt_zero] / df2[col][idx_gt_zero])
+                    result.column_results[col].ratio_min_nonzero = ratio.min()
+                    result.column_results[col].ratio_max_nonzero = ratio.max()
 
     return result
