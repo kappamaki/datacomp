@@ -14,22 +14,9 @@ CGRN = "\033[92m"
 CEND = "\033[0m"
 
 
-def series_nonequal_index(ser1, ser2):
-    ser1_null = ser1.isnull()
-    ser2_null = ser2.isnull()
-    # Get index where series values are null in one series but the other
-    nonequal_null_idx = list(set(ser1[ser1_null].index) ^ set(ser2[ser2_null].index))
-    # Get index where series non-null values are nonequal
-    notnull_idx = set(ser1[~ser1_null].index) & set(ser2[~ser2_null].index)
-    nonequal_notnull_idx = ser1.loc[notnull_idx] != ser2.loc[notnull_idx]
-    nonequal_notnull_idx = ser1.loc[notnull_idx][nonequal_notnull_idx].index.tolist()
-    # Combine null/non-null indexes
-    return nonequal_null_idx + nonequal_notnull_idx
-
-
-def load_file(fpath):
+def load_file(fpath: Path) -> pd.DataFrame:
     if fpath.suffix == ".parquet":
-        return pd.read_parquet(fpath)
+        return pd.read_parquet(fpath).reset_index()
     if fpath.suffix == ".csv":
         return pd.read_csv(fpath)
 
@@ -214,8 +201,77 @@ def main():
         help="one or more columns to use as an index for the data "
              "(optional: row number will be used if no arguments given)"
     )
+
+    column_filter_group = parser.add_mutually_exclusive_group()
+    column_filter_group.add_argument(
+        "-c",
+        "--column",
+        dest="columns",
+        action="append",
+        help=(
+            "Columns to compare. Can specify more than one option (e.g. -c col1 -c col2). "
+            "Mutually exclusive with the \"--exclude-column\" option."
+        ),
+    )
+    column_filter_group.add_argument(
+        "-x",
+        "--exclude-column",
+        dest="exclude_columns",
+        action="append",
+        help=(
+            "Columns to exclude from comparison. "
+            "Can specify more than one option (e.g. -x col1 -x col2). "
+            "Mutually exclusive with the \"--column\" option."
+        ),
+    )
+
     args = parser.parse_args()
-    result = compare_data(args.filepath_left, args.filepath_right, args.index)
+
+    print(f"Loading {args.filepath_left} ...")
+    df1 = load_file(args.filepath_left)
+    print(f"Loading {args.filepath_right} ...")
+    df2 = load_file(args.filepath_right)
+
+    for data, data_fpath in [
+        (df1, args.filepath_left),
+        (df2, args.filepath_right),
+    ]:
+        for index_col in args.index:
+            if index_col not in data:
+                print()
+                print(
+                    f'⚠️  {CRED}ERROR: index column "{index_col}" not found in {data_fpath}{CEND}'
+                )
+                sys.exit(1)
+
+        if args.columns:
+            for col in args.columns:
+                if col not in data:
+                    print()
+                    print(
+                        f'⚠️  {CRED}ERROR: column "{col}" not found in {data_fpath}{CEND}'
+                    )
+                    sys.exit(1)
+
+        if args.exclude_columns:
+            for col in args.exclude_columns:
+                if col not in data:
+                    print()
+                    print(
+                        f'⚠️  {CRED}ERROR: exclude column "{col}" not found in {data_fpath}{CEND}'
+                    )
+                    sys.exit(1)
+
+    if args.columns:
+        df1 = df1[args.index + args.columns]
+        df2 = df2[args.index + args.columns]
+
+    if args.exclude_columns:
+        df1 = df1.drop(columns=args.exclude_columns)
+        df2 = df2.drop(columns=args.exclude_columns)
+
+    result = compare_data(df1, df2, args.index)
+
     print_result(result)
 
 
