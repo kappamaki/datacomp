@@ -1,6 +1,3 @@
-import sys
-from pathlib import Path
-
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -72,22 +69,8 @@ def series_nonequal_index(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
     return nonequal_null_idx + nonequal_notnull_idx
 
 
-def load_file(fpath: Path) -> pd.DataFrame:
-    if fpath.suffix == ".parquet":
-        return pd.read_parquet(fpath)
-    if fpath.suffix == ".csv":
-        return pd.read_csv(fpath)
-
-    raise RuntimeError(f"Unsupported file type {fpath.suffix} for {fpath}")
-
-
-def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) -> CompareResult:
+def compare_data(df1: pd.DataFrame, df2: pd.DataFrame, index_cols: List[str]) -> CompareResult:
     result = CompareResult()
-
-    print(f"Loading {data_fpath_1} ...")
-    df1 = load_file(data_fpath_1)
-    print(f"Loading {data_fpath_2} ...")
-    df2 = load_file(data_fpath_2)
 
     if set(df1.columns) != set(df2.columns):
         result.match = False
@@ -96,16 +79,10 @@ def compare_data(data_fpath_1: Path, data_fpath_2: Path, index_cols: List[str]) 
 
     if index_cols:
         print("Indexing dataframes ...")
-        for df, data_fpath in [(df1, data_fpath_1), (df2, data_fpath_2)]:
-            try:
-                df.sort_values(index_cols, inplace=True)
-                df.set_index(index_cols, inplace=True)
-            except KeyError:
-                print()
-                print(
-                    f"⚠️  ERROR: index columns ({', '.join(index_cols)}) not found in {data_fpath}"
-                )
-                sys.exit(1)
+        df1 = df1.sort_values(index_cols)
+        df1 = df1.set_index(index_cols)
+        df2 = df2.sort_values(index_cols)
+        df2 = df2.set_index(index_cols)
 
         print("Validating dataframe indices ...")
         l_dup_indices = df1.index.duplicated(keep=False)
