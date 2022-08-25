@@ -52,24 +52,24 @@ def series_nonequal_index(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
     ser1_null = ser1.isnull()
     ser2_null = ser2.isnull()
     # Get index where series values are null in one series but the other
-    nonequal_null_idx = list(set(ser1[ser1_null].index) ^ set(ser2[ser2_null].index))
+    nonequal_null_idx = ser1[ser1_null ^ ser2_null].index.tolist()
     # Get index where series non-null values are nonequal
-    notnull_idx = list(set(ser1[~ser1_null].index) & set(ser2[~ser2_null].index))
+    notnull_idx = (~ser1_null) & (~ser2_null)
 
-    if notnull_idx:
+    if notnull_idx.any():
         if (
-            isinstance(ser1.loc[notnull_idx[0]], np.ndarray)
-            or isinstance(ser2.loc[notnull_idx[0]], np.ndarray)
+            isinstance(ser1.loc[ser1.notnull().index[0]], np.ndarray)
+            or isinstance(ser2.loc[ser2.notnull().index[0]], np.ndarray)
         ):
             # Use this function instead of != operator on ser1/ser2
             # (handle series of numpy arrays)
             v_array_equal = np.vectorize(np.array_equal)
-            nonequal_notnull_idx = ~v_array_equal(ser1.loc[notnull_idx], ser2.loc[notnull_idx])
+            nonequal_notnull_idx = ~v_array_equal(ser1[notnull_idx], ser2[notnull_idx])
         else:
             # Otherwise, use much faster != operator
-            nonequal_notnull_idx = ser1.loc[notnull_idx] != ser2.loc[notnull_idx]
+            nonequal_notnull_idx = ser1[notnull_idx] != ser2[notnull_idx]
 
-        nonequal_notnull_idx = ser1.loc[notnull_idx][nonequal_notnull_idx].index.tolist()
+        nonequal_notnull_idx = ser1[notnull_idx][nonequal_notnull_idx].index.tolist()
     else:
         nonequal_notnull_idx = []
 
