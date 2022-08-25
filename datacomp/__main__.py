@@ -253,22 +253,22 @@ def main():
                     )
                     sys.exit(1)
 
-        if args.exclude_columns:
-            for col in args.exclude_columns:
-                if col not in data:
-                    print()
-                    print(
-                        f'⚠️  {CRED}ERROR: exclude column "{col}" not found in {data_fpath}{CEND}'
-                    )
-                    sys.exit(1)
+    if args.exclude_columns:
+        for col in args.exclude_columns:
+            if col not in df1 and col not in df2:
+                print()
+                print(
+                    f'⚠️  {CRED}ERROR: exclude column "{col}" not found in either input file{CEND}'
+                )
+                sys.exit(1)
 
     if args.columns:
         df1 = df1[args.index + args.columns]
         df2 = df2[args.index + args.columns]
 
     if args.exclude_columns:
-        df1 = df1.drop(columns=args.exclude_columns)
-        df2 = df2.drop(columns=args.exclude_columns)
+        df1 = df1.drop(columns=[col for col in args.exclude_columns if col in df1])
+        df2 = df2.drop(columns=[col for col in args.exclude_columns if col in df2])
 
     result = compare_data(df1, df2, args.index)
 
