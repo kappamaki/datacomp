@@ -13,3 +13,9 @@ datacomp filepath1.parquet filepath2.parquet id timestamp
 ```
 
 For more detailed usage instructions, run `datacomp --help`.
+
+## Installation
+
+```sh
+pip3 install git+https://github.com/kappamaki/datacomp
+```
