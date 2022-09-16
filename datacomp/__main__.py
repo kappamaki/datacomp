@@ -15,12 +15,31 @@ CEND = "\033[0m"
 
 
 def load_file(fpath: Path) -> pd.DataFrame:
-    if fpath.suffix == ".parquet":
-        return pd.read_parquet(fpath).reset_index()
-    if fpath.suffix == ".csv":
-        return pd.read_csv(fpath)
+    if fpath.is_file():
+        if fpath.suffix == ".parquet":
+            return pd.read_parquet(fpath).reset_index()
+        if fpath.suffix == ".csv" or fpath.name.endswith(".csv.gz"):
+            return pd.read_csv(fpath)
+        raise RuntimeError(f'Unsupported file type "{fpath.suffix}" for "{fpath}"')
 
-    raise RuntimeError(f"Unsupported file type {fpath.suffix} for {fpath}")
+    elif fpath.is_dir():
+        suffixes = sorted(
+            set(
+                ".csv" if f.name.endswith(".csv.gz") else f.suffix
+                for f in fpath.iterdir()
+            )
+        )
+        if len(suffixes) > 1:
+            raise RuntimeError(f'Directory "{fpath}" contains mixed file types: {suffixes}')
+        elif len(suffixes) == 0:
+            raise RuntimeError(f'Directory "{fpath}" is empty')
+        elif suffixes == [".parquet"]:
+            return pd.read_parquet(fpath).reset_index()
+        elif suffixes == [".csv"]:
+            return pd.concat([pd.read_csv(f) for f in fpath.iterdir()], ignore_index=True)
+        raise RuntimeError(f'Directory "{fpath}" contains unsupported file types: {suffixes[0]}')
+
+    raise RuntimeError(f'Filepath "{fpath}" not found!')
 
 
 def series_to_str(series, **kwargs):
