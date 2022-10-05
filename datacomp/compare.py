@@ -163,6 +163,8 @@ def compare_data(df1: pd.DataFrame, df2: pd.DataFrame, index_cols: List[str]) ->
                 if (
                     pd.api.types.is_numeric_dtype(df1[col].dtype)
                     and pd.api.types.is_numeric_dtype(df2[col].dtype)
+                    and not pd.api.types.is_bool_dtype(df1[col].dtype)
+                    and not pd.api.types.is_bool_dtype(df2[col].dtype)
                 ):
                     abs_diff = (df1[col] - df2[col]).abs()
                     result.column_results[col].diff_min = abs_diff.min()
