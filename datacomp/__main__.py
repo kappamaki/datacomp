@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import shutil
 import sys
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import numpy as np
@@ -42,13 +44,17 @@ def load_file(fpath: Path) -> pd.DataFrame:
     raise RuntimeError(f'Filepath "{fpath}" not found!')
 
 
-def series_to_str(series, **kwargs):
+def series_to_str(series, max_colwidth: Optional[int] = None, **kwargs):
     if "max_rows" not in kwargs:
         kwargs["max_rows"] = pd.get_option("display.max_rows")
     if "min_rows" not in kwargs:
         kwargs["min_rows"] = pd.get_option("display.min_rows")
 
-    return series.to_string(**kwargs)
+    if max_colwidth is None:
+        max_colwidth = shutil.get_terminal_size((80, 20)).columns  # pass fallback
+
+    with pd.option_context("display.max_colwidth", max_colwidth):
+        return series.to_string(**kwargs)
 
 
 def dataframe_to_str(df, **kwargs):
