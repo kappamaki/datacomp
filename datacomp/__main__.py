@@ -249,6 +249,12 @@ def main():
             "Mutually exclusive with the \"--column\" option."
         ),
     )
+    column_filter_group.add_argument(
+        "--tolerance",
+        type=float,
+        default=None,
+        help="Optional tolerance to use when comparing numeric values",
+    )
 
     args = parser.parse_args()
 
@@ -295,7 +301,7 @@ def main():
         df1 = df1.drop(columns=[col for col in args.exclude_columns if col in df1])
         df2 = df2.drop(columns=[col for col in args.exclude_columns if col in df2])
 
-    result = compare_data(df1, df2, args.index)
+    result = compare_data(df1, df2, args.index, tolerance=args.tolerance)
 
     print_result(result)
 
