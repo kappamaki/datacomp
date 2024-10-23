@@ -226,6 +226,12 @@ def main():
         help="one or more columns to use as an index for the data "
              "(optional: row number will be used if no arguments given)"
     )
+    parser.add_argument(
+        "--tolerance",
+        type=float,
+        default=None,
+        help="Optional tolerance to use when comparing numeric values",
+    )
 
     column_filter_group = parser.add_mutually_exclusive_group()
     column_filter_group.add_argument(
@@ -248,12 +254,6 @@ def main():
             "Can specify more than one option (e.g. -x col1 -x col2). "
             "Mutually exclusive with the \"--column\" option."
         ),
-    )
-    column_filter_group.add_argument(
-        "--tolerance",
-        type=float,
-        default=None,
-        help="Optional tolerance to use when comparing numeric values",
     )
 
     args = parser.parse_args()
