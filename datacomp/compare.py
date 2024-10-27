@@ -76,7 +76,7 @@ def series_nonequal_index(
             and (atol > 0 or rtol > 0)
         ):
             # Otherwise if comparing numeric values and either "tolerance" option is set
-            nonequal_notnull_idx = np.isclose(
+            nonequal_notnull_idx = ~np.isclose(
                 ser1[notnull_idx],
                 ser2[notnull_idx],
                 atol=atol,
