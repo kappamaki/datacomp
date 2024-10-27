@@ -187,7 +187,9 @@ def compare_data(df1: pd.DataFrame, df2: pd.DataFrame, index_cols: List[str]) ->
                     result.column_results[col].ratio_min_nonzero = ratio.min()
                     result.column_results[col].ratio_max_nonzero = ratio.max()
 
-                    mismatch_df["absdiff"] = (mismatch_df[f"{col}_LEFT"] - mismatch_df[f"{col}_RIGHT"]).abs()
+                    mismatch_df["absdiff"] = (
+                        mismatch_df[f"{col}_LEFT"] - mismatch_df[f"{col}_RIGHT"]
+                    ).abs()
                     mismatch_df = mismatch_df.sort_values("absdiff", na_position="first")
                     mismatch_df = mismatch_df.drop(columns=["absdiff"])
                     result.column_results[col].mismatch_data = mismatch_df
