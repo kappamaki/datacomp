@@ -48,7 +48,9 @@ class CompareResult:
         self.right_only_indexes = pd.Series([], dtype=str)
 
 
-def series_nonequal_index(ser1: pd.Series, ser2: pd.Series, tolerance: float | None) -> pd.Series:
+def series_nonequal_index(
+    ser1: pd.Series, ser2: pd.Series, atol: float = 0.0, rtol: float = 0.0
+) -> pd.Series:
     ser1_null = ser1.isnull()
     ser2_null = ser2.isnull()
     # Get index where series values are null in one series but the other
@@ -61,17 +63,25 @@ def series_nonequal_index(ser1: pd.Series, ser2: pd.Series, tolerance: float | N
             isinstance(ser1.loc[ser1.notnull().index[0]], np.ndarray)
             or isinstance(ser2.loc[ser2.notnull().index[0]], np.ndarray)
         ):
+            def compare_arrays(a1, a2):
+                return np.allclose(a1, a2, atol=atol, rtol=rtol, equal_nan=True)
+
             # Use this function instead of != operator on ser1/ser2
             # (handle series of numpy arrays)
-            v_array_equal = np.vectorize(np.array_equal)
+            v_array_equal = np.vectorize(compare_arrays)
             nonequal_notnull_idx = ~v_array_equal(ser1[notnull_idx], ser2[notnull_idx])
         elif (
             pd.api.types.is_numeric_dtype(ser1.dtype)
             and pd.api.types.is_numeric_dtype(ser2.dtype)
-            and tolerance is not None
+            and (atol > 0 or rtol > 0)
         ):
-            # Otherwise if comparing numeric values and "tolerance" is set
-            nonequal_notnull_idx = (ser1[notnull_idx] - ser2[notnull_idx]).abs() > tolerance
+            # Otherwise if comparing numeric values and either "tolerance" option is set
+            nonequal_notnull_idx = np.isclose(
+                ser1[notnull_idx],
+                ser2[notnull_idx],
+                atol=atol,
+                rtol=rtol,
+            )
         else:
             # Otherwise, use much faster != operator
             nonequal_notnull_idx = ser1[notnull_idx] != ser2[notnull_idx]
@@ -88,7 +98,8 @@ def compare_data(
     df1: pd.DataFrame,
     df2: pd.DataFrame,
     index_cols: List[str],
-    tolerance: float | None,
+    atol: float = 0,
+    rtol: float = 0,
 ) -> CompareResult:
     result = CompareResult()
 
@@ -149,7 +160,24 @@ def compare_data(
     common_cols = [col for col in df1 if col in set(df2.columns)]
     # quick check if dataframes match, otherwise show detailed differences
     print("Comparing data ...")
-    if not df1[common_cols].equals(df2[common_cols]):
+
+    # Check if dataframes are equal (depending on tolerance options)
+    if atol > 0 or rtol > 0:
+        frames_equal = True
+        try:
+            pd.testing.assert_frame_equal(
+                df1[common_cols],
+                df2[common_cols],
+                atol=atol,
+                rtol=rtol,
+                check_exact=False,
+            )
+        except AssertionError:
+            frames_equal = False
+    else:
+        frames_equal = df1[common_cols].equals(df2[common_cols])
+
+    if not frames_equal:
         result.match = False
         result.data_match = False
 
@@ -157,7 +185,7 @@ def compare_data(
             print(f"Comparing column ({idx + 1}/{len(common_cols)}): {col} ...")
             if not df1[col].equals(df2[col]):
 
-                mismatch_idx = series_nonequal_index(df1[col], df2[col], tolerance=tolerance)
+                mismatch_idx = series_nonequal_index(df1[col], df2[col], atol=atol, rtol=rtol)
                 mismatch_df = df1.loc[mismatch_idx, [col]].join(
                     df2.loc[mismatch_idx, [col]], lsuffix="_LEFT", rsuffix="_RIGHT"
                 )

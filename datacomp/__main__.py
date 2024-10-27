@@ -227,10 +227,16 @@ def main():
              "(optional: row number will be used if no arguments given)"
     )
     parser.add_argument(
-        "--tolerance",
+        "--atol",
         type=float,
-        default=None,
-        help="Optional tolerance to use when comparing numeric values",
+        default=0.0,
+        help="Optional absolute tolerance to use when comparing numeric values",
+    )
+    parser.add_argument(
+        "--rtol",
+        type=float,
+        default=0.0,
+        help="Optional relative tolerance to use when comparing numeric values",
     )
 
     column_filter_group = parser.add_mutually_exclusive_group()
@@ -301,7 +307,7 @@ def main():
         df1 = df1.drop(columns=[col for col in args.exclude_columns if col in df1])
         df2 = df2.drop(columns=[col for col in args.exclude_columns if col in df2])
 
-    result = compare_data(df1, df2, args.index, tolerance=args.tolerance)
+    result = compare_data(df1, df2, args.index, atol=args.atol, rtol=args.rtol)
 
     print_result(result)
 
