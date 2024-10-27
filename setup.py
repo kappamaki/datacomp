@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name="datacomp",
-    version="0.6.1",
+    version="0.7.0",
     description="CLI for comparing tabular data files",
     author="kappamaki",
     install_requires=["pandas", "pyarrow"],
