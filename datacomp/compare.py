@@ -213,7 +213,7 @@ def compare_data(
                     result.column_results[col].diff_std = abs_diff.std()
 
                     # Ratio for all values (inlcuding zeros; min/max may be 0/inf)
-                    ratio = (df1[col] / df2[col])
+                    ratio = df1[col].astype(float) / df2[col].astype(float)
                     result.column_results[col].ratio_min = ratio.min()
                     result.column_results[col].ratio_max = ratio.max()
                     idx_inf = np.isinf(ratio)
